@@ -4,6 +4,7 @@
 
 ATL-#1-Softwareprojekt (HE24, PE-A): ein URL-Shortener mit Benutzerkonten,
 JWT-Authentifizierung und Klick-Statistik, gebaut mit FastAPI und SQLModel.
+Das Web-Frontend ist eine Vue-3-SPA mit Tailwind CSS (Verzeichnis `frontend/`).
 
 > Dieses README ist ein *living document* und wächst mit jedem Feature mit.
 
@@ -47,6 +48,19 @@ ruff check .                    # Linting
 ruff format .                   # Formatierung
 ```
 
+### Frontend
+
+Das Web-Frontend liegt unter `frontend/` (Vue 3 + Vite + Tailwind). Es spricht die
+laufende API an (CORS ist dafür vorbereitet):
+
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:5173
+```
+
+Details siehe [`frontend/README.md`](frontend/README.md).
+
 ## 3. Komponenten
 
 | Modul | Aufgabe |
@@ -83,7 +97,8 @@ ruff format .                   # Formatierung
 
 Drei Schichten mit Abhängigkeitsrichtung nur von oben nach unten. Die
 Service-Schicht kennt kein HTTP; Authentifizierung ist eine Querschnittsfunktion
-der API-Schicht.
+der API-Schicht. Das Vue-Frontend (`frontend/`) ist ein eigenständiger Client, der
+die REST-API über JWT konsumiert.
 
 ```mermaid
 flowchart TD
