@@ -1,21 +1,8 @@
-import pytest
 from sqlalchemy import inspect
-from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel
 
 import app.database as database
 from app.database import get_session, init_db
-
-
-@pytest.fixture(name="memory_engine")
-def memory_engine_fixture():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    yield engine
-    engine.dispose()
 
 
 def test_get_session_yields_a_session(monkeypatch, memory_engine):
