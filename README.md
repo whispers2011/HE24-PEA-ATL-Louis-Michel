@@ -53,10 +53,10 @@ ruff format .                   # Formatierung
 | `app/routers/auth.py` | Registrierung, Login (JWT) und `GET /api/auth/me` |
 | `app/routers/links.py` | Owner-scoped CRUD für Kurzlinks (`/api/links`) |
 | `app/routers/redirect.py` | Öffentliche Weiterleitung `GET /{code}` (307) mit Klick-Erfassung |
+| `app/routers/stats.py` | Klick-Statistik `GET /api/links/{code}/stats` (auth, nur eigene) |
 | `app/services/shortcode.py` | Eindeutige Kurzcodes erzeugen, Wunsch-Aliase per Regex prüfen |
+| `app/services/stats.py` | Klicks aggregieren (gesamt und pro Tag) |
 | `app/main.py` | FastAPI-App, Lifespan (Tabellen-Init), Router-Registrierung, Health-Check |
-
-*(wächst pro Feature: Statistik)*
 
 ## 4. Architektur
 
@@ -126,6 +126,9 @@ erDiagram
   jeder Aufruf den Server erreicht und korrekt gezählt wird. Die Catch-all-Route
   `GET /{code}` wird zuletzt registriert, damit `/health`, `/docs` und `/api/…`
   Vorrang behalten.
+- **Aggregation in der Service-Schicht**: die Tages-Statistik ist eine reine
+  Funktion über die Klick-Datensätze und dadurch unabhängig von HTTP testbar; die
+  Owner-Prüfung ist eine geteilte FastAPI-Dependency (`get_owned_link`).
 
 *(wächst pro Feature, u. a.: REST statt SOAP/GraphQL, 307 statt 301.)*
 

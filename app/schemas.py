@@ -24,6 +24,14 @@ class LinkRead(BaseModel):
     created_at: datetime
 
 
+class StatsRead(BaseModel):
+    """Klick-Statistik eines Kurzlinks: Gesamtzahl und Klicks pro Tag."""
+
+    code: str
+    total: int
+    per_day: dict[str, int]
+
+
 class UserCreate(BaseModel):
     """Eingabe für die Registrierung."""
 
