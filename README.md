@@ -49,9 +49,11 @@ ruff format .                   # Formatierung
 | `app/database.py` | Engine, Tabellen-Initialisierung und `get_session`-Dependency |
 | `app/models.py` | SQLModel-Tabellen `User`, `Link`, `Click` inkl. Beziehungen und `created_at` |
 | `app/schemas.py` | Request-/Response-Schemas mit `HttpUrl`-Validierung |
-| `app/main.py` | FastAPI-App, Lifespan (Tabellen-Init), Health-Check |
+| `app/security.py` | Passwort-Hashing (bcrypt), JWT erstellen/prüfen, `get_current_user` |
+| `app/routers/auth.py` | Registrierung, Login (JWT) und `GET /api/auth/me` |
+| `app/main.py` | FastAPI-App, Lifespan (Tabellen-Init), Router-Registrierung, Health-Check |
 
-*(wächst pro Feature: Auth, Link-CRUD, Redirect, Statistik)*
+*(wächst pro Feature: Link-CRUD, Redirect, Statistik)*
 
 ## 4. Architektur
 
@@ -107,8 +109,12 @@ erDiagram
   Funktion testbar.
 - **TDD mit 100 % Branch-Coverage**: Tests beschreiben Verhalten, nicht
   Implementierung.
+- **JWT (HS256) statt Server-Sessions**: zustandslose Authentifizierung, passend
+  für eine API; Passwörter ausschliesslich als bcrypt-Hash, Secret nur aus `.env`.
+- **OAuth2-Password-Flow** beim Login: integriert sich nahtlos in den
+  „Authorize"-Knopf der Swagger UI (Login → Token → geschützter Aufruf).
 
-*(wächst pro Feature, u. a.: REST statt SOAP/GraphQL, 307 statt 301, JWT-Ansatz.)*
+*(wächst pro Feature, u. a.: REST statt SOAP/GraphQL, 307 statt 301.)*
 
 ## 6. Was würde ich mit mehr Zeit verbessern
 

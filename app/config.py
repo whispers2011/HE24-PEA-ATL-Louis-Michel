@@ -15,8 +15,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./app.db"
     base_url: str = "http://localhost:8000"
     code_length: int = 6
-    secret_key: str = "change-me-in-production"
+    # Pflichtwert ohne In-Code-Default: das JWT-Signatur-Secret gehört
+    # ausschliesslich in die .env. Ohne gesetztes SECRET_KEY startet die App nicht.
+    secret_key: str
     access_token_expire_minutes: int = 60
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]  # secret_key stammt aus .env/Umgebung
