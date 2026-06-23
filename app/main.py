@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.database import init_db
-from app.routers import auth, links, redirect
+from app.routers import auth, links, redirect, stats
 
 
 @asynccontextmanager
@@ -27,6 +27,7 @@ def health() -> dict[str, str]:
 
 app.include_router(auth.router)
 app.include_router(links.router)
+app.include_router(stats.router)
 # Catch-all-Weiterleitung zuletzt registrieren, damit spezifische Routen
 # (z. B. /health, /docs, /api/...) Vorrang vor `GET /{code}` haben.
 app.include_router(redirect.router)
