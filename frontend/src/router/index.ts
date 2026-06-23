@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/api/client'
 import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
+import NotFoundView from '@/views/NotFoundView.vue'
 import StatsView from '@/views/StatsView.vue'
 
 const router = createRouter({
@@ -23,6 +24,7 @@ const router = createRouter({
       props: true,
       meta: { requiresAuth: true },
     },
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView },
   ],
 })
 
