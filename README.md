@@ -52,10 +52,11 @@ ruff format .                   # Formatierung
 | `app/security.py` | Passwort-Hashing (bcrypt), JWT erstellen/prüfen, `get_current_user` |
 | `app/routers/auth.py` | Registrierung, Login (JWT) und `GET /api/auth/me` |
 | `app/routers/links.py` | Owner-scoped CRUD für Kurzlinks (`/api/links`) |
+| `app/routers/redirect.py` | Öffentliche Weiterleitung `GET /{code}` (307) mit Klick-Erfassung |
 | `app/services/shortcode.py` | Eindeutige Kurzcodes erzeugen, Wunsch-Aliase per Regex prüfen |
 | `app/main.py` | FastAPI-App, Lifespan (Tabellen-Init), Router-Registrierung, Health-Check |
 
-*(wächst pro Feature: Redirect, Statistik)*
+*(wächst pro Feature: Statistik)*
 
 ## 4. Architektur
 
@@ -121,6 +122,10 @@ erDiagram
   löschbar (`404` unbekannt, `403` fremd).
 - **Open-Redirect-Schutz**: `HttpUrl` erzwingt ausschliesslich `http`/`https`
   und ein Längenlimit; ungültige Ziel-URLs werden früh abgewiesen.
+- **307 statt 301** bei der Weiterleitung: kein dauerhaftes Browser-Caching, damit
+  jeder Aufruf den Server erreicht und korrekt gezählt wird. Die Catch-all-Route
+  `GET /{code}` wird zuletzt registriert, damit `/health`, `/docs` und `/api/…`
+  Vorrang behalten.
 
 *(wächst pro Feature, u. a.: REST statt SOAP/GraphQL, 307 statt 301.)*
 
