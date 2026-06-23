@@ -51,6 +51,7 @@ ruff format .                   # Formatierung
 | `app/schemas.py` | Request-/Response-Schemas mit `HttpUrl`-Validierung |
 | `app/security.py` | Passwort-Hashing (bcrypt), JWT erstellen/prüfen, `get_current_user` |
 | `app/routers/auth.py` | Registrierung, Login (JWT) und `GET /api/auth/me` |
+| `app/services/shortcode.py` | Eindeutige Kurzcodes erzeugen, Wunsch-Aliase per Regex prüfen |
 | `app/main.py` | FastAPI-App, Lifespan (Tabellen-Init), Router-Registrierung, Health-Check |
 
 *(wächst pro Feature: Link-CRUD, Redirect, Statistik)*
@@ -113,6 +114,8 @@ erDiagram
   für eine API; Passwörter ausschliesslich als bcrypt-Hash, Secret nur aus `.env`.
 - **OAuth2-Password-Flow** beim Login: integriert sich nahtlos in den
   „Authorize"-Knopf der Swagger UI (Login → Token → geschützter Aufruf).
+- **`secrets` statt `random`** für Kurzcodes: kryptografisch nicht vorhersagbar;
+  Kollisionen werden gegen die DB geprüft und neu gewürfelt.
 
 *(wächst pro Feature, u. a.: REST statt SOAP/GraphQL, 307 statt 301.)*
 
