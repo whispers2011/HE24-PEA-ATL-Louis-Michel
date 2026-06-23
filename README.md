@@ -35,10 +35,22 @@ uvicorn app.main:app --reload
 - API-Dokumentation (Swagger UI): <http://localhost:8000/docs>
 - Health-Check: <http://localhost:8000/health>
 
-Typischer Ablauf: registrieren → einloggen (Token) → Kurzlink anlegen → Aufruf von
-`/{code}` leitet weiter und zählt den Klick → Statistik unter `/api/links/{code}/stats`.
-In der Swagger UI führt der „Authorize"-Knopf den Login-Flow aus und hängt das Token
-automatisch an die geschützten Aufrufe.
+### Typischer Ablauf
+
+```mermaid
+flowchart LR
+    R(["1 · Registrieren"]) --> L(["2 · Login"])
+    L -- JWT --> C(["3 · Kurzlink anlegen"])
+    C --> ST(["5 · Statistik ansehen"])
+    C -. Kurzlink teilen .-> B((Besucher))
+    B -- "GET /{code}" --> RD["4 · 307-Weiterleitung<br/>Klick wird gezählt"]
+    RD --> ST
+```
+
+Der Benutzer registriert sich, meldet sich an (JWT) und legt Kurzlinks an. Besucher
+rufen `/{code}` öffentlich auf – jeder Aufruf wird per `307` weitergeleitet und gezählt
+und fliesst in die Statistik ein. In der Swagger UI führt der „Authorize"-Knopf den
+Login-Flow aus und hängt das Token automatisch an die geschützten Aufrufe.
 
 Tests und Qualitätsprüfung:
 
