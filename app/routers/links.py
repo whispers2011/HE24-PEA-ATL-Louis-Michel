@@ -23,8 +23,12 @@ def _to_read(link: Link) -> LinkRead:
     )
 
 
-def _get_owned_link(code: str, session: Session, user: User) -> Link:
-    """Lädt einen eigenen Kurzlink; `404` unbekannt, `403` fremd."""
+def get_owned_link(
+    code: str,
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> Link:
+    """Dependency: lädt einen eigenen Kurzlink; `404` unbekannt, `403` fremd."""
     link = session.exec(select(Link).where(Link.code == code)).first()
     if link is None:
         raise HTTPException(
@@ -75,22 +79,16 @@ def list_links(
 
 
 @router.get("/{code}", response_model=LinkRead)
-def get_link(
-    code: str,
-    session: Session = Depends(get_session),
-    user: User = Depends(get_current_user),
-) -> LinkRead:
+def get_link(link: Link = Depends(get_owned_link)) -> LinkRead:
     """Liefert einen eigenen Kurzlink."""
-    return _to_read(_get_owned_link(code, session, user))
+    return _to_read(link)
 
 
 @router.delete("/{code}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_link(
-    code: str,
+    link: Link = Depends(get_owned_link),
     session: Session = Depends(get_session),
-    user: User = Depends(get_current_user),
 ) -> None:
     """Löscht einen eigenen Kurzlink samt seiner Klicks."""
-    link = _get_owned_link(code, session, user)
     session.delete(link)
     session.commit()
