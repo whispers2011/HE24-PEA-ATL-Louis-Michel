@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.database import init_db
-from app.routers import auth, links
+from app.routers import auth, links, redirect
 
 
 @asynccontextmanager
@@ -18,11 +18,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="URL-Shortener", lifespan=lifespan)
 
-app.include_router(auth.router)
-app.include_router(links.router)
-
 
 @app.get("/health")
 def health() -> dict[str, str]:
     """Liefert den Betriebszustand fuer Monitoring und CI."""
     return {"status": "ok"}
+
+
+app.include_router(auth.router)
+app.include_router(links.router)
+# Catch-all-Weiterleitung zuletzt registrieren, damit spezifische Routen
+# (z. B. /health, /docs, /api/...) Vorrang vor `GET /{code}` haben.
+app.include_router(redirect.router)
