@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 
 import { ApiError } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
+import { isValidEmail, isValidPassword } from '@/utils/validation'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -19,14 +20,29 @@ function switchMode(next: 'login' | 'register') {
   error.value = ''
 }
 
+function validate(): boolean {
+  if (!isValidEmail(email.value)) {
+    error.value = 'Bitte eine gültige E-Mail-Adresse eingeben.'
+    return false
+  }
+  if (!isValidPassword(password.value)) {
+    error.value = 'Das Passwort muss mindestens 8 Zeichen lang sein.'
+    return false
+  }
+  return true
+}
+
 async function submit() {
   error.value = ''
+  if (!validate()) {
+    return
+  }
   loading.value = true
   try {
     if (mode.value === 'login') {
-      await auth.login(email.value, password.value)
+      await auth.login(email.value.trim(), password.value)
     } else {
-      await auth.register(email.value, password.value)
+      await auth.register(email.value.trim(), password.value)
     }
     router.push({ name: 'dashboard' })
   } catch (e) {
@@ -69,14 +85,13 @@ async function submit() {
         </button>
       </div>
 
-      <form class="space-y-4" @submit.prevent="submit">
+      <form class="space-y-4" novalidate @submit.prevent="submit">
         <div>
           <label class="mb-1 block text-sm font-medium text-slate-700" for="email">E-Mail</label>
           <input
             id="email"
             v-model="email"
             type="email"
-            required
             autocomplete="email"
             class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
           />
@@ -89,8 +104,6 @@ async function submit() {
             id="password"
             v-model="password"
             type="password"
-            required
-            minlength="8"
             autocomplete="current-password"
             class="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
           />

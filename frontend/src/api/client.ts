@@ -25,6 +25,13 @@ export class ApiError extends Error {
   }
 }
 
+let unauthorizedHandler: (() => void) | null = null
+
+/** Registriert eine Reaktion auf abgelaufene/ungültige Sitzungen (401). */
+export function setUnauthorizedHandler(handler: () => void): void {
+  unauthorizedHandler = handler
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers)
   const token = getToken()
@@ -39,6 +46,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const data: unknown = await response.json().catch(() => null)
   if (!response.ok) {
+    // Abgelaufenes Token bei einem geschützten Aufruf: Sitzung global beenden.
+    if (response.status === 401 && token !== null) {
+      setToken(null)
+      unauthorizedHandler?.()
+    }
     const detail =
       (data as { detail?: string } | null)?.detail ?? response.statusText
     throw new ApiError(response.status, detail)

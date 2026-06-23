@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import type { Stats } from '@/types'
 
 const props = defineProps<{ code: string }>()
@@ -15,8 +15,14 @@ const maxCount = computed(() => Math.max(1, ...days.value.map(([, count]) => cou
 onMounted(async () => {
   try {
     stats.value = await api.stats(props.code)
-  } catch {
-    error.value = 'Statistik konnte nicht geladen werden.'
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      error.value = 'Diesen Kurzlink gibt es nicht (mehr).'
+    } else if (e instanceof ApiError && e.status === 403) {
+      error.value = 'Kein Zugriff auf diesen Kurzlink.'
+    } else {
+      error.value = 'Statistik konnte nicht geladen werden.'
+    }
   }
 })
 </script>
