@@ -47,9 +47,11 @@ ruff format .                   # Formatierung
 |---|---|
 | `app/config.py` | Zentrale Einstellungen aus `.env` (DB-URL, Base-URL, Code-Länge, JWT-Secret, Token-Ablauf) |
 | `app/database.py` | Engine, Tabellen-Initialisierung und `get_session`-Dependency |
+| `app/models.py` | SQLModel-Tabellen `User`, `Link`, `Click` inkl. Beziehungen und `created_at` |
+| `app/schemas.py` | Request-/Response-Schemas mit `HttpUrl`-Validierung |
 | `app/main.py` | FastAPI-App, Lifespan (Tabellen-Init), Health-Check |
 
-*(wächst pro Feature: Datenmodell, Auth, Link-CRUD, Redirect, Statistik)*
+*(wächst pro Feature: Auth, Link-CRUD, Redirect, Statistik)*
 
 ## 4. Architektur
 
@@ -66,7 +68,34 @@ flowchart TD
 
 ### Datenmodell (ER)
 
-*Folgt mit F2 (Datenmodell): Tabellen `User`, `Link`, `Click`.*
+```mermaid
+erDiagram
+    USER ||--o{ LINK : besitzt
+    LINK ||--o{ CLICK : erhaelt
+    USER {
+        int id PK
+        string email UK
+        string hashed_password
+        datetime created_at
+    }
+    LINK {
+        int id PK
+        string code UK
+        string target_url
+        int owner_id FK
+        datetime created_at
+    }
+    CLICK {
+        int id PK
+        int link_id FK
+        datetime created_at
+    }
+```
+
+- **User 1:n Link** – ein User besitzt beliebig viele Kurzlinks (owner-scoped).
+- **Link 1:n Click** – jeder Aufruf erzeugt einen Klick-Datensatz mit Zeitstempel;
+  beim Löschen eines Links werden seine Klicks mitentfernt (`cascade`).
+- `created_at` auf allen Tabellen – Grundlage für die Tages-Statistik (F7).
 
 ## 5. Überlegungen zum Projekt (Entscheidungen & Trade-offs)
 
