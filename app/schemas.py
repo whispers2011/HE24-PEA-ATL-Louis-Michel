@@ -15,6 +15,15 @@ class LinkCreate(BaseModel):
     alias: str | None = None
 
 
+class LinkRead(BaseModel):
+    """Ausgabe eines Kurzlinks inklusive vollständiger Kurz-URL."""
+
+    code: str
+    target_url: str
+    short_url: str
+    created_at: datetime
+
+
 class UserCreate(BaseModel):
     """Eingabe für die Registrierung."""
 
