@@ -1,0 +1,43 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtuelle Umgebungen
+.venv/
+venv/
+env/
+
+# Test / Coverage / Lint Caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Datenbank / lokale Daten
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets / Umgebung (Vorlage .env.example wird getrackt)
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# AI-/Dev-Tooling – nicht Teil der Abgabe-Software
+.claude/
+.serena/
+.specify/
