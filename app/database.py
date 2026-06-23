@@ -4,6 +4,7 @@ from collections.abc import Generator
 
 from sqlmodel import Session, SQLModel, create_engine
 
+from app import models  # noqa: F401  – registriert die Tabellen in SQLModel.metadata
 from app.config import settings
 
 engine = create_engine(
