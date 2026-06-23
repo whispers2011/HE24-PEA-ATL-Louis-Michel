@@ -23,7 +23,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Konfiguration anlegen (Werte anpassen)
+# Konfiguration anlegen und Werte anpassen.
+# SECRET_KEY ist Pflicht – ohne gesetzten Wert startet die App bewusst nicht.
 cp .env.example .env
 
 # Anwendung starten
@@ -32,6 +33,11 @@ uvicorn app.main:app --reload
 
 - API-Dokumentation (Swagger UI): <http://localhost:8000/docs>
 - Health-Check: <http://localhost:8000/health>
+
+Typischer Ablauf: registrieren → einloggen (Token) → Kurzlink anlegen → Aufruf von
+`/{code}` leitet weiter und zählt den Klick → Statistik unter `/api/links/{code}/stats`.
+In der Swagger UI führt der „Authorize"-Knopf den Login-Flow aus und hängt das Token
+automatisch an die geschützten Aufrufe.
 
 Tests und Qualitätsprüfung:
 
@@ -57,6 +63,21 @@ ruff format .                   # Formatierung
 | `app/services/shortcode.py` | Eindeutige Kurzcodes erzeugen, Wunsch-Aliase per Regex prüfen |
 | `app/services/stats.py` | Klicks aggregieren (gesamt und pro Tag) |
 | `app/main.py` | FastAPI-App, Lifespan (Tabellen-Init), Router-Registrierung, Health-Check |
+
+### API-Endpunkte
+
+| Methode | Pfad | Auth | Zweck | Statuscodes |
+|---|---|---|---|---|
+| `POST` | `/api/auth/register` | – | Benutzer registrieren | `201`, `409` |
+| `POST` | `/api/auth/login` | – | Login, JWT ausgeben | `200`, `401` |
+| `GET` | `/api/auth/me` | ✔ | Aktuellen Benutzer abrufen | `200`, `401` |
+| `POST` | `/api/links` | ✔ | Kurzlink anlegen | `201`, `400`, `401`, `409`, `422` |
+| `GET` | `/api/links` | ✔ | Eigene Kurzlinks auflisten | `200`, `401` |
+| `GET` | `/api/links/{code}` | ✔ | Eigenen Kurzlink lesen | `200`, `401`, `403`, `404` |
+| `DELETE` | `/api/links/{code}` | ✔ | Eigenen Kurzlink löschen | `204`, `401`, `403`, `404` |
+| `GET` | `/api/links/{code}/stats` | ✔ | Klick-Statistik | `200`, `401`, `403`, `404` |
+| `GET` | `/{code}` | – | Weiterleitung + Klick | `307`, `404` |
+| `GET` | `/health` | – | Betriebszustand | `200` |
 
 ## 4. Architektur
 
@@ -104,6 +125,9 @@ erDiagram
 
 ## 5. Überlegungen zum Projekt (Entscheidungen & Trade-offs)
 
+- **REST statt SOAP/GraphQL**: ressourcenorientierte Endpunkte mit HTTP-Statuscodes
+  passen zum überschaubaren, klar abgegrenzten Domänenmodell; SOAP wäre zu schwergewichtig,
+  GraphQL für diesen Umfang überdimensioniert.
 - **FastAPI + SQLModel** statt Flask/SQLAlchemy pur: Typsicherheit, automatische
   Validierung und Swagger-Dokumentation; entspricht dem Unterrichtsstoff.
 - **SQLite**: genügt für Umfang und Tests (In-Memory pro Test); migrierbar auf
