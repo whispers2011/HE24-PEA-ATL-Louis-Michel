@@ -1,0 +1,21 @@
+# Cloud-Build-Pipeline: läuft bei jedem Push auf das Repository.
+# Schlägt ein Schritt fehl, bricht der Build ab und alle folgenden
+# Schritte (Image, Deploy) werden nicht ausgeführt.
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s
+
+steps:
+  # 1. Qualitätsprüfung: Lint, Format-Check und Tests mit 100 % Branch-Coverage.
+  - id: tests
+    name: python:3.14-slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        pip install --quiet -r requirements.txt
+        ruff check .
+        ruff format --check .
+        pytest --cov=app --cov-branch --cov-fail-under=100
