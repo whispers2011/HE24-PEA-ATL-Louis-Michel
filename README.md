@@ -300,4 +300,47 @@ dieser braucht genau die folgenden Rollen:
 | `roles/secretmanager.secretAccessor` | das JWT-Secret zur Laufzeit lesen |
 | `roles/logging.logWriter` | Build-Logs schreiben |
 
-*(Fortsetzung folgt: CI/CD-Pipeline, Fehlschlag-Nachweis.)*
+### 7.3 CI/CD-Pipeline (Cloud Build)
+
+Die Pipeline ist in [`cloudbuild.yaml`](cloudbuild.yaml) definiert und entstand in
+drei nachvollziehbaren Schritten (siehe Commit-Historie): zuerst nur die Tests,
+dann Image-Build und Registry-Push, zuletzt das Deployment.
+
+**Ablauf bei jedem Push** – der Cloud-Build-Trigger reagiert auf Pushes auf
+*alle* Branches:
+
+| Schritt | Was passiert | Wo |
+|---|---|---|
+| `tests` | Ruff (Lint + Format-Check) und pytest mit `--cov-fail-under=100` | jeder Push |
+| `image-bauen` | Docker-Image bauen – baut dabei die SPA und validiert sie mit | jeder Push |
+| `image-pushen` | Image mit Commit-SHA- und `latest`-Tag in die Artifact Registry | nur `main` |
+| `deployen` | `gcloud run deploy` mit dem frischen Image; `SECRET_KEY` kommt aus dem Secret Manager | nur `main` |
+
+Schlägt ein Schritt fehl, bricht Cloud Build den Build an dieser Stelle ab – bei
+roten Tests wird also weder ein Image gebaut noch irgendetwas deployed
+(Nachweis in Abschnitt 7.4).
+
+**Warum deployen nur von `main`?** Die Pipeline läuft „bei jedem Push", aber
+Feature-Branches werden nur gebaut und getestet. Live geht ausschliesslich der
+Stand, der es durch Review und grüne CI nach `main` geschafft hat – `main` bleibt
+damit der einzige deploybare, jederzeit lauffähige Stand (gleiches Prinzip wie in
+ATL #1).
+
+**Erster Deploy und `BASE_URL`.** Nach dem ersten Deployment wird die öffentliche
+Cloud-Run-URL einmalig als Umgebungsvariable gesetzt, damit die API ihre
+Kurz-URLs mit der Live-Domain ausgibt (bleibt für alle folgenden Revisionen
+erhalten):
+
+```bash
+gcloud run services update url-shortener --region europe-west6 \
+  --update-env-vars BASE_URL=https://<cloud-run-url>
+```
+
+**Datenhaltung (bewusster Trade-off).** Die SQLite-Datenbank liegt im
+Container-Dateisystem von Cloud Run und ist damit *ephemer*: Bei einem Redeploy
+oder Neustart der Instanz gehen die Daten verloren. Für diesen Nachweis genügt
+das; `--max-instances 1` hält den Zustand konsistent. Der Weg zu persistenten
+Daten (Cloud SQL/PostgreSQL – dieselbe ORM-Schicht macht die Migration klein)
+steht unter „Was würde ich mit mehr Zeit verbessern".
+
+*(Fortsetzung folgt: Fehlschlag-Nachweis.)*
