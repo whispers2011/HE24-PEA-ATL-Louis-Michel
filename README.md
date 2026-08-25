@@ -367,4 +367,28 @@ das; `--max-instances 1` hält den Zustand konsistent. Der Weg zu persistenten
 Daten (Cloud SQL/PostgreSQL – dieselbe ORM-Schicht macht die Migration klein)
 steht unter „Was würde ich mit mehr Zeit verbessern".
 
-*(Fortsetzung folgt: Fehlschlag-Nachweis.)*
+### 7.4 Fehlschlag-Nachweis: rote Tests stoppen das Deployment
+
+Pflichtnachweis der Aufgabenstellung: Was macht Cloud Build, wenn ein Test
+fehlschlägt? Dazu wurde auf dem Branch
+[`demo/failing-test`](https://github.com/whispers2011/HE24-PEA-ATL-Louis-Michel/tree/demo/failing-test)
+(bleibt als Beleg bestehen und wird nie gemergt) genau eine Erwartung verändert:
+`test_health_returns_ok` verlangt dort den Statuscode `418` statt `200`.
+
+Der Push löste die Pipeline aus – mit dem erwarteten Ergebnis:
+
+- Schritt `tests` schlägt fehl:
+  `FAILED tests/integration/test_health.py::test_health_returns_ok` –
+  `1 failed, 76 passed`.
+- Cloud Build **bricht den Build an dieser Stelle ab**: Die Folgeschritte
+  `image-bauen`, `image-pushen` und `deployen` wurden gar nie gestartet
+  (Status «–» in den Build-Details).
+- Es entstand **kein neues Image** in der Registry, und die Cloud-Run-Revision
+  blieb unverändert – die zuletzt geprüfte Version läuft ungestört weiter.
+
+![Fehlgeschlagener Build: Test-Schritt rot, Folgeschritte nicht gestartet](docs/img/cloud-build-failed-log.png)
+
+Der Build-Verlauf zeigt den Kontrast: grüne Durchläufe auf `main` (mit Deploy)
+und Feature-Branches, daneben der rote Build des absichtlich gebrochenen Tests:
+
+![Build-Verlauf mit grünen und rotem Build](docs/img/cloud-build-failed-history.png)
