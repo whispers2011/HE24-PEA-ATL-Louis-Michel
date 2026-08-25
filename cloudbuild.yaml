@@ -45,3 +45,20 @@ steps:
           echo "Branch ${BRANCH_NAME}: Registry-Push übersprungen."
         fi
 
+  # 4. Nur auf main: Image als neue Revision auf Cloud Run deployen.
+  - id: deployen
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        if [ "${BRANCH_NAME}" = "main" ]; then
+          gcloud run deploy ${_SERVICE} \
+            --image ${_IMAGE}:${SHORT_SHA} \
+            --region ${_REGION} \
+            --allow-unauthenticated \
+            --max-instances 1 \
+            --update-secrets SECRET_KEY=url-shortener-secret-key:latest
+        else
+          echo "Branch ${BRANCH_NAME}: Deploy übersprungen."
+        fi
