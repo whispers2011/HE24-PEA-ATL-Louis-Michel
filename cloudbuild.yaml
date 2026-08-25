@@ -1,6 +1,12 @@
 # Cloud-Build-Pipeline: läuft bei jedem Push auf das Repository.
 # Schlägt ein Schritt fehl, bricht der Build ab und alle folgenden
 # Schritte (Image, Deploy) werden nicht ausgeführt.
+# Gebaut wird auf jedem Branch; gepusht und deployed wird nur auf main.
+
+substitutions:
+  _REGION: europe-west6
+  _IMAGE: europe-west6-docker.pkg.dev/${PROJECT_ID}/url-shortener/url-shortener
+  _SERVICE: url-shortener
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -19,3 +25,23 @@ steps:
         ruff check .
         ruff format --check .
         pytest --cov=app --cov-branch --cov-fail-under=100
+
+  # 2. Docker-Image bauen (baut dabei auch das Frontend und validiert es).
+  - id: image-bauen
+    name: gcr.io/cloud-builders/docker
+    args: [build, -t, "${_IMAGE}:${SHORT_SHA}", -t, "${_IMAGE}:latest", .]
+
+  # 3. Nur auf main: Image in die Artifact Registry pushen.
+  - id: image-pushen
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        if [ "${BRANCH_NAME}" = "main" ]; then
+          docker push ${_IMAGE}:${SHORT_SHA}
+          docker push ${_IMAGE}:latest
+        else
+          echo "Branch ${BRANCH_NAME}: Registry-Push übersprungen."
+        fi
+
