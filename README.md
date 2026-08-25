@@ -241,4 +241,63 @@ docker run -p 8080:8080 -e SECRET_KEY=ein-langes-zufälliges-secret url-shortene
 `/assets/…` statt `/app/assets/…`, und das Frontend blieb im Container leer.
 Lösung: `type-check` und `vite build` werden im Dockerfile getrennt aufgerufen.
 
-*(Fortsetzung folgt: Cloud-Setup, CI/CD-Pipeline, Fehlschlag-Nachweis.)*
+### 7.2 Cloud-Setup (Google Cloud)
+
+Alle Schritte laufen im GCP-Projekt `pea-hf-ict`, Region `europe-west6` (Zürich –
+Datenstandort Schweiz, geringe Latenz).
+
+**Kostenkontrolle zuerst.** Bevor irgendein Dienst läuft, begrenzt ein Budget das
+Risiko: 5 CHF pro Monat, E-Mail-Alarm bei 50 %, 90 % und 100 % der Summe. Alle
+verwendeten Dienste bleiben im Free Tier (Cloud Build 120 Build-Minuten/Tag,
+Cloud Run 2 Mio. Requests/Monat, Artifact Registry unter 0.5 GB) – das Budget ist
+das Sicherheitsnetz, falls doch etwas Kosten verursacht.
+
+![Budget mit 5-CHF-Limit und Alarmschwellen](docs/img/billing-budget.png)
+
+```bash
+gcloud billing budgets create --billing-account=<KONTO-ID> \
+  --display-name="pea-hf-ict Budget (max 5 CHF)" --budget-amount=5CHF \
+  --filter-projects=projects/<PROJEKTNUMMER> \
+  --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0
+```
+
+**Benötigte APIs aktivieren.** Cloud Build und Artifact Registry waren im Projekt
+bereits aktiv; für den Betrieb kamen Cloud Run und Secret Manager dazu:
+
+```bash
+gcloud services enable run.googleapis.com secretmanager.googleapis.com
+```
+
+**Artifact Registry statt Container Registry.** Die Aufgabenstellung nennt die
+*Container Registry* (`gcr.io`) – diese ist von Google abgekündigt und abgeschaltet;
+die **Artifact Registry** ist ihr offizieller Nachfolger und übernimmt dieselbe Rolle
+in der Pipeline (Ablage der Docker-Images). Das Repository:
+
+```bash
+gcloud artifacts repositories create url-shortener \
+  --repository-format=docker --location=europe-west6
+```
+
+![Artifact-Registry-Repository url-shortener](docs/img/artifact-registry-repo.png)
+
+**Secret Manager für das JWT-Secret.** `SECRET_KEY` steht weder im Repo noch in der
+Pipeline-Definition: Der Wert liegt als Secret `url-shortener-secret-key` im Secret
+Manager, und Cloud Run reicht ihn der App zur Laufzeit als Umgebungsvariable weiter
+(gleiches Prinzip wie lokal mit `.env` – Secrets bleiben ausserhalb der Versionierung).
+
+```bash
+printf '%s' "<zufälliges-secret>" | gcloud secrets create url-shortener-secret-key --data-file=-
+```
+
+**IAM-Rollen.** Cloud Build baut und deployt mit dem Standard-Compute-Service-Account;
+dieser braucht genau die folgenden Rollen:
+
+| Rolle | Zweck |
+|---|---|
+| `roles/artifactregistry.writer` | Images in die Registry pushen |
+| `roles/run.admin` | Cloud-Run-Dienst deployen |
+| `roles/iam.serviceAccountUser` | beim Deploy als Laufzeit-Service-Account agieren |
+| `roles/secretmanager.secretAccessor` | das JWT-Secret zur Laufzeit lesen |
+| `roles/logging.logWriter` | Build-Logs schreiben |
+
+*(Fortsetzung folgt: CI/CD-Pipeline, Fehlschlag-Nachweis.)*
