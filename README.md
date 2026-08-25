@@ -6,8 +6,6 @@ ATL-#1-Softwareprojekt (HE24, PE-A): ein URL-Shortener mit Benutzerkonten,
 JWT-Authentifizierung und Klick-Statistik, gebaut mit FastAPI und SQLModel.
 Das Web-Frontend ist eine Vue-3-SPA mit Tailwind CSS (Verzeichnis `frontend/`).
 
-> Dieses README ist ein *living document* und wächst mit jedem Feature mit.
-
 ## 1. Kurzbeschreibung
 
 Der Dienst verkürzt lange URLs zu kurzen Codes. Registrierte Benutzer verwalten
@@ -37,15 +35,7 @@ uvicorn app.main:app --reload
 
 ### Typischer Ablauf
 
-```mermaid
-flowchart LR
-    R(["1 · Registrieren"]) --> L(["2 · Login"])
-    L -- JWT --> C(["3 · Kurzlink anlegen"])
-    C --> ST(["5 · Statistik ansehen"])
-    C -. Kurzlink teilen .-> B((Besucher))
-    B -- "GET /{code}" --> RD["4 · 307-Weiterleitung<br/>Klick wird gezählt"]
-    RD --> ST
-```
+![Ablauf: Kurzlink anlegen, teilen, weiterleiten, auswerten](docs/img/diagramm-funktionsweise.png)
 
 Der Benutzer registriert sich, meldet sich an (JWT) und legt Kurzlinks an. Besucher
 rufen `/{code}` öffentlich auf – jeder Aufruf wird per `307` weitergeleitet und gezählt
@@ -181,21 +171,50 @@ erDiagram
   Funktion über die Klick-Datensätze und dadurch unabhängig von HTTP testbar; die
   Owner-Prüfung ist eine geteilte FastAPI-Dependency (`get_owned_link`).
 
-*(wächst pro Feature, u. a.: REST statt SOAP/GraphQL, 307 statt 301.)*
+Die Entscheidungen zum Cloud-Deployment (Artifact Registry statt Container
+Registry, Deploy-Gate auf `main`, Secret Manager, ephemeres SQLite) sind in
+Kapitel 7 direkt bei den jeweiligen Schritten begründet.
 
 ## 6. Was würde ich mit mehr Zeit verbessern
 
-- PostgreSQL mit Alembic-Migrationen statt `create_all`.
-- Live-Klick-Statistik über WebSockets.
-- Mutation Testing zur Bewertung der Testqualität.
-
-*(wird zum Projektabschluss vervollständigt.)*
+- **Persistente Datenbank (Cloud SQL/PostgreSQL).** Die grösste Schwäche des
+  aktuellen Betriebs: SQLite lebt im Container-Dateisystem und geht bei jedem
+  Redeploy verloren. Dank der ORM-Schicht (SQLModel) wäre die Migration klein –
+  im Kern eine andere `DATABASE_URL` plus ein Cloud-SQL-Anschluss am
+  Cloud-Run-Dienst; danach dürfte auch `--max-instances` über 1 steigen.
+- **Alembic-Migrationen statt `create_all`.** Versionierte Schemaänderungen
+  machen spätere Modell-Anpassungen im Live-Betrieb nachvollziehbar und
+  rückrollbar.
+- **Staging-Umgebung.** Ein zweiter Cloud-Run-Dienst (z. B. `url-shortener-staging`),
+  auf den Feature-Branches deployen – dann liesse sich jede Änderung vor dem
+  Merge unter Produktionsbedingungen anschauen.
+- **Frontend-Tests in Cloud Build.** Heute prüft die Pipeline das Frontend nur
+  über den Vite-Build im Docker-Image; die Vitest-Unit-Tests laufen in GitHub
+  Actions. Ein eigener Cloud-Build-Schritt würde beide Prüfungen an einem Ort
+  bündeln – um den Preis längerer Builds.
+- **Monitoring und Alarme.** Ein Uptime-Check auf `/health` plus eine
+  Benachrichtigung bei Fehlerraten würde Ausfälle melden, bevor es Benutzer tun.
+- **Live-Klick-Statistik über WebSockets** (Unterrichtsthema Woche 18) – Klicks
+  erscheinen in Echtzeit im Dashboard statt erst beim Neuladen.
+- **Mutation Testing (`mutmut`).** 100 % Coverage sagt, *dass* jede Zeile lief –
+  Mutation Testing würde zeigen, ob die Tests Fehler auch wirklich fangen.
 
 ## 7. Cloud-Deployment (ATL #2)
 
-> Dieses Kapitel dokumentiert Schritt für Schritt, wie der URL-Shortener in die
-> Google Cloud kommt: Container (Docker) → Build-Pipeline (Cloud Build) →
-> Image-Ablage (Artifact Registry) → Betrieb (Cloud Run). Es wächst pro Feature mit.
+Dieses Kapitel dokumentiert Schritt für Schritt, wie der URL-Shortener in die
+Google Cloud kam: Container (Docker) → Build-Pipeline (Cloud Build) →
+Image-Ablage (Artifact Registry) → Betrieb (Cloud Run). Das Zusammenspiel im
+Überblick:
+
+![Infrastruktur: vom Push zur laufenden App](docs/img/diagramm-infrastruktur.png)
+
+Ein `git push` genügt: GitHub meldet den Push an Cloud Build, die Pipeline prüft
+den Code, baut das Docker-Image, legt es in der Artifact Registry ab und stellt
+es als neue Cloud-Run-Revision live. Das JWT-Secret kommt zur Laufzeit aus dem
+Secret Manager; Benutzer erreichen die App öffentlich per HTTPS.
+
+> **Live:** <https://url-shortener-204941757946.europe-west6.run.app> –
+> Web-App unter `/app/`, Swagger UI unter `/docs`, Health-Check unter `/health`.
 
 ### 7.1 Containerisierung (Docker)
 
@@ -245,6 +264,25 @@ Lösung: `type-check` und `vite build` werden im Dockerfile getrennt aufgerufen.
 
 Alle Schritte laufen im GCP-Projekt `pea-hf-ict`, Region `europe-west6` (Zürich –
 Datenstandort Schweiz, geringe Latenz).
+
+**Warum Cloud Run?** Google bietet vier Wege, einen Dienst zu betreiben – sie
+unterscheiden sich vor allem darin, wie viel Infrastruktur man selbst verwalten
+muss:
+
+| Dienst | Modell | Man verwaltet | Komplexität (1–10) |
+|---|---|---|---|
+| Compute Engine | virtuelle Maschine (IaaS) | OS, Updates, Webserver, Skalierung | 7 |
+| Kubernetes Engine | Container-Orchestrierung | Cluster, Nodes, Manifeste | 9 |
+| **Cloud Run** | Container als Service (PaaS) | nur das Container-Image | **3** |
+| Cloud Functions | einzelne Funktionen (FaaS) | nur Funktions-Code | 2 |
+
+Cloud Functions wäre noch einfacher, passt aber nicht: Diese Anwendung ist eine
+zusammenhängende FastAPI-App mit eigenem Routing und statischem Frontend, keine
+Sammlung einzelner Funktionen. Cloud Run nimmt genau das Docker-Image aus F12
+entgegen, skaliert automatisch (auch auf null – keine Kosten ohne Traffic) und
+verlangt weder VM-Pflege noch ein Kubernetes-Cluster. Für ein containerisiertes
+Einzelprojekt ist es der passendste Dienst – und der von der Aufgabenstellung
+vorgesehene.
 
 **Kostenkontrolle zuerst.** Bevor irgendein Dienst läuft, begrenzt ein Budget das
 Risiko: 5 CHF pro Monat, E-Mail-Alarm bei 50 %, 90 % und 100 % der Summe. Alle
@@ -306,6 +344,8 @@ Die Pipeline ist in [`cloudbuild.yaml`](cloudbuild.yaml) definiert und entstand 
 drei nachvollziehbaren Schritten (siehe Commit-Historie): zuerst nur die Tests,
 dann Image-Build und Registry-Push, zuletzt das Deployment.
 
+![Pipeline-Ablauf: testen, bauen, deployen oder abbrechen](docs/img/diagramm-pipeline.png)
+
 **Ablauf bei jedem Push** – der Cloud-Build-Trigger reagiert auf Pushes auf
 *alle* Branches:
 
@@ -340,9 +380,6 @@ Der Cloud-Run-Dienst mit öffentlicher URL:
 Die deployte Anwendung im Browser (Login-Ansicht der SPA):
 
 ![Live-App auf Cloud Run](docs/img/app-live.png)
-
-> **Live-URL:** <https://url-shortener-204941757946.europe-west6.run.app>
-> (führt direkt zur Web-App; Swagger UI unter `/docs`)
 
 **Warum deployen nur von `main`?** Die Pipeline läuft „bei jedem Push", aber
 Feature-Branches werden nur gebaut und getestet. Live geht ausschliesslich der
@@ -392,3 +429,25 @@ Der Build-Verlauf zeigt den Kontrast: grüne Durchläufe auf `main` (mit Deploy)
 und Feature-Branches, daneben der rote Build des absichtlich gebrochenen Tests:
 
 ![Build-Verlauf mit grünen und rotem Build](docs/img/cloud-build-failed-history.png)
+
+### 7.5 Herausforderungen unterwegs
+
+- **Vite bekam `--base` nicht zu sehen.** `npm run build -- --base=/app/` reichte
+  das Flag über das `npm-run-all`-Script nicht an Vite weiter – die SPA lud ihre
+  Assets von `/assets/…` statt `/app/assets/…` und blieb im Container leer.
+  Lösung: `type-check` und `vite build` im Dockerfile getrennt aufrufen (7.1).
+- **Container Registry gibt es nicht mehr.** Die Aufgabenstellung nennt die
+  Container Registry; Google hat sie abgeschaltet. Der Wechsel auf die Artifact
+  Registry war unumgänglich und ist in 7.2 begründet – Rolle und Handhabung in
+  der Pipeline sind identisch.
+- **SPA-Routing gegen die Catch-all-Route.** `GET /{code}` fängt jeden Pfad –
+  auch `/app`. Das SPA-Mount muss deshalb vor dem Redirect-Router registriert
+  werden, Deep-Links brauchen einen `index.html`-Fallback, und Aliase wie `app`
+  oder `docs` sind seither als Wunsch-Codes gesperrt (7.1).
+- **Eigener Service-Account verlangt eine Logging-Entscheidung.** Der Trigger
+  baut mit dem Compute-Service-Account; ohne `options: logging: CLOUD_LOGGING_ONLY`
+  verweigert Cloud Build den Start. Dazu brauchte der Account gezielte
+  IAM-Rollen (7.2) – nicht mehr und nicht weniger.
+- **Ephemeres SQLite.** Im Container gehen Daten bei jedem Redeploy verloren.
+  Für den Nachweis akzeptiert (`--max-instances 1`, dokumentiert in 7.3); der
+  saubere Ausweg steht in Kapitel 6.
