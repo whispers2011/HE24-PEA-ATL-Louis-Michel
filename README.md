@@ -320,6 +320,30 @@ Schlägt ein Schritt fehl, bricht Cloud Build den Build an dieser Stelle ab – 
 roten Tests wird also weder ein Image gebaut noch irgendetwas deployed
 (Nachweis in Abschnitt 7.4).
 
+Der Trigger ist mit dem GitHub-Repository verbunden und reagiert auf jeden Push:
+
+![Cloud-Build-Trigger](docs/img/cloud-build-trigger.png)
+
+Ein erfolgreicher Durchlauf auf `main` – alle vier Schritte grün, am Ende steht
+die neue Revision live:
+
+![Erfolgreicher Cloud-Build mit allen vier Schritten](docs/img/cloud-build-success.png)
+
+Das gebaute Image liegt mit Commit-SHA- und `latest`-Tag in der Artifact Registry:
+
+![Docker-Image in der Artifact Registry](docs/img/artifact-registry-image.png)
+
+Der Cloud-Run-Dienst mit öffentlicher URL:
+
+![Cloud-Run-Dienst url-shortener](docs/img/cloud-run-service.png)
+
+Die deployte Anwendung im Browser (Login-Ansicht der SPA):
+
+![Live-App auf Cloud Run](docs/img/app-live.png)
+
+> **Live-URL:** <https://url-shortener-204941757946.europe-west6.run.app>
+> (führt direkt zur Web-App; Swagger UI unter `/docs`)
+
 **Warum deployen nur von `main`?** Die Pipeline läuft „bei jedem Push", aber
 Feature-Branches werden nur gebaut und getestet. Live geht ausschliesslich der
 Stand, der es durch Review und grüne CI nach `main` geschafft hat – `main` bleibt
