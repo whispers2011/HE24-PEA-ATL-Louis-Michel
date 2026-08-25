@@ -7,7 +7,9 @@ from app.main import app
 def test_health_returns_ok(client):
     response = client.get("/health")
 
-    assert response.status_code == 200
+    # Bewusst falsche Erwartung: Nachweis, dass Cloud Build bei einem
+    # fehlgeschlagenen Test abbricht und nichts deployed (ATL #2, Abschnitt 7.4).
+    assert response.status_code == 418
     assert response.json() == {"status": "ok"}
 
 
