@@ -10,6 +10,9 @@ from app.models import Link
 
 ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 ALIAS_PATTERN = re.compile(r"[A-Za-z0-9_-]{3,32}")
+# Pfade, die von eigenen Routen belegt sind: ein Kurzlink mit diesem Code
+# wäre nie erreichbar, weil die spezifischen Routen Vorrang haben.
+RESERVED_ALIASES = frozenset({"app", "docs", "redoc", "health"})
 
 
 def generate_code(length: int | None = None) -> str:
@@ -19,8 +22,8 @@ def generate_code(length: int | None = None) -> str:
 
 
 def is_valid_alias(alias: str) -> bool:
-    """Prüft einen Wunsch-Alias: 3–32 Zeichen aus `[A-Za-z0-9_-]`."""
-    return ALIAS_PATTERN.fullmatch(alias) is not None
+    """Prüft einen Wunsch-Alias: 3–32 Zeichen aus `[A-Za-z0-9_-]`, nicht reserviert."""
+    return ALIAS_PATTERN.fullmatch(alias) is not None and alias not in RESERVED_ALIASES
 
 
 def code_exists(session: Session, code: str) -> bool:
