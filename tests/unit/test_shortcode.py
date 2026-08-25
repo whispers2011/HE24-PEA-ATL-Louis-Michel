@@ -41,6 +41,11 @@ def test_invalid_aliases_are_rejected(alias: str):
     assert shortcode.is_valid_alias(alias) is False
 
 
+@pytest.mark.parametrize("alias", sorted(shortcode.RESERVED_ALIASES))
+def test_reserved_aliases_are_rejected(alias: str):
+    assert shortcode.is_valid_alias(alias) is False
+
+
 def test_generate_unique_code_returns_unused_code(session: Session):
     code = shortcode.generate_unique_code(session)
     assert shortcode.code_exists(session, code) is False

@@ -9,6 +9,7 @@ def test_settings_have_sensible_defaults():
     assert settings.code_length == 6
     assert settings.access_token_expire_minutes == 60
     assert settings.secret_key
+    assert settings.frontend_dist is None
 
 
 def test_settings_read_values_from_environment(monkeypatch):
