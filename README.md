@@ -190,3 +190,55 @@ erDiagram
 - Mutation Testing zur Bewertung der Testqualität.
 
 *(wird zum Projektabschluss vervollständigt.)*
+
+## 7. Cloud-Deployment (ATL #2)
+
+> Dieses Kapitel dokumentiert Schritt für Schritt, wie der URL-Shortener in die
+> Google Cloud kommt: Container (Docker) → Build-Pipeline (Cloud Build) →
+> Image-Ablage (Artifact Registry) → Betrieb (Cloud Run). Es wächst pro Feature mit.
+
+### 7.1 Containerisierung (Docker)
+
+**Docker kurz erklärt:** Docker verpackt eine Anwendung samt Laufzeitumgebung und
+Abhängigkeiten in ein *Image* – ein unveränderliches Abbild, aus dem sich beliebig
+viele *Container* (isolierte Prozesse) starten lassen. Für Deployments ist das
+zentral: dasselbe Image, das lokal getestet wurde, läuft unverändert in der Cloud –
+Umgebungsunterschiede („läuft nur auf meinem Laptop") entfallen.
+
+Die wichtigsten Dockerfile-Anweisungen, erklärt am eigenen [`Dockerfile`](Dockerfile):
+
+| Anweisung | Zweck | Einsatz im Projekt |
+|---|---|---|
+| `FROM` | Basis-Image festlegen | zweistufig: `node:22-alpine` baut das Frontend, `python:3.14-slim` führt die API aus |
+| `WORKDIR` | Arbeitsverzeichnis im Image | `/build` (Build-Stufe) bzw. `/srv` (Laufzeit) |
+| `COPY` | Dateien ins Image kopieren | `COPY --from=frontend` übernimmt nur das Build-Ergebnis (`dist/`) der ersten Stufe |
+| `RUN` | Befehl beim Bauen ausführen | `npm ci` + Vite-Build, `pip install` |
+| `ENV` | Umgebungsvariable setzen | `VITE_API_BASE_URL=""` (same-origin), `FRONTEND_DIST` (aktiviert die SPA-Auslieferung) |
+| `EXPOSE` | Container-Port dokumentieren | `8080` |
+| `CMD` | Startbefehl des Containers | `uvicorn`, respektiert die von Cloud Run gesetzte Variable `PORT` |
+
+**Multi-Stage-Build:** Stufe 1 baut die Vue-SPA mit `--base=/app/` und leerer
+API-Basis-URL (die SPA spricht die API same-origin an), Stufe 2 installiert die
+FastAPI-Anwendung und übernimmt nur das fertige `dist/`. Ergebnis ist **ein** Image,
+das unter einer Adresse alles ausliefert:
+
+- `/app/` – Web-Frontend (SPA); unbekannte Pfade fallen auf die `index.html` zurück,
+  damit Deep-Links des History-Routers funktionieren. `/` leitet auf `/app/` um.
+- `/api/…`, `/docs`, `/health` – API wie gehabt.
+- `/{code}` – öffentliche Weiterleitung; Wunsch-Aliase, die mit eigenen Routen
+  kollidieren würden (`app`, `docs`, `redoc`, `health`), sind seit diesem Schritt reserviert.
+
+Lokal bauen, starten und prüfen:
+
+```bash
+docker build -t url-shortener .
+docker run -p 8080:8080 -e SECRET_KEY=ein-langes-zufälliges-secret url-shortener
+# http://localhost:8080/app/ (Web-App) · /docs (Swagger UI) · /health
+```
+
+**Herausforderung:** Der Aufruf `npm run build -- --base=/app/` reichte `--base`
+über das `npm-run-all`-Script nicht an Vite weiter – die Asset-Pfade zeigten auf
+`/assets/…` statt `/app/assets/…`, und das Frontend blieb im Container leer.
+Lösung: `type-check` und `vite build` werden im Dockerfile getrennt aufgerufen.
+
+*(Fortsetzung folgt: Cloud-Setup, CI/CD-Pipeline, Fehlschlag-Nachweis.)*
