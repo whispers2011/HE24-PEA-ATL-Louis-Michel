@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # ausschliesslich in die .env. Ohne gesetztes SECRET_KEY startet die App nicht.
     secret_key: str
     access_token_expire_minutes: int = 60
+    # Verzeichnis des gebauten Frontends; nur gesetzt (z. B. im Container)
+    # wird die SPA unter /app ausgeliefert.
+    frontend_dist: str | None = None
 
 
 settings = Settings()  # type: ignore[call-arg]  # secret_key stammt aus .env/Umgebung
