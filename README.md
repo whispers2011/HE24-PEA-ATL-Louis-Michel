@@ -2,9 +2,12 @@
 
 ![CI](https://github.com/whispers2011/HE24-PEA-ATL-Louis-Michel/actions/workflows/ci.yml/badge.svg)
 
-ATL-#1-Softwareprojekt (HE24, PE-A): ein URL-Shortener mit Benutzerkonten,
+ATL-Softwareprojekt (HE24, PE-A): ein URL-Shortener mit Benutzerkonten,
 JWT-Authentifizierung und Klick-Statistik, gebaut mit FastAPI und SQLModel.
 Das Web-Frontend ist eine Vue-3-SPA mit Tailwind CSS (Verzeichnis `frontend/`).
+
+Das README dokumentiert beide Arbeiten: **Kapitel 1–6** das Softwareprojekt
+(**ATL #1**), **Kapitel 7** das Cloud-Deployment (**ATL #2**).
 
 ## 1. Kurzbeschreibung
 
@@ -102,16 +105,28 @@ Service-Schicht kennt kein HTTP; Authentifizierung ist eine Querschnittsfunktion
 der API-Schicht. Das Vue-Frontend (`frontend/`) ist ein eigenständiger Client, der
 die REST-API über JWT konsumiert.
 
-```mermaid
+![Schichtenarchitektur: API, Services, Daten, SQLite](docs/img/diagramm-architektur.png)
+
+<details>
+<summary>Mermaid-Quelle des Diagramms</summary>
+
+```
 flowchart TD
     A["API-Schicht – Router<br/>HTTP, Status, Validierung, Auth-Guard"] --> B["Service-Schicht<br/>reine, testbare Geschäftslogik"]
     B --> C["Daten-Schicht – SQLModel<br/>Persistenz"]
     C --> D[("Datenbank<br/>SQLite")]
 ```
 
+</details>
+
 ### Datenmodell (ER)
 
-```mermaid
+![Datenmodell: User, Link, Click mit Beziehungen](docs/img/diagramm-datenmodell.png)
+
+<details>
+<summary>Mermaid-Quelle des Diagramms</summary>
+
+```
 erDiagram
     USER ||--o{ LINK : besitzt
     LINK ||--o{ CLICK : erhaelt
@@ -134,6 +149,8 @@ erDiagram
         datetime created_at
     }
 ```
+
+</details>
 
 - **User 1:n Link** – ein User besitzt beliebig viele Kurzlinks (owner-scoped).
 - **Link 1:n Click** – jeder Aufruf erzeugt einen Klick-Datensatz mit Zeitstempel;
@@ -199,7 +216,14 @@ Kapitel 7 direkt bei den jeweiligen Schritten begründet.
 - **Mutation Testing (`mutmut`).** 100 % Coverage sagt, *dass* jede Zeile lief –
   Mutation Testing würde zeigen, ob die Tests Fehler auch wirklich fangen.
 
+---
+
 ## 7. Cloud-Deployment (ATL #2)
+
+> [!IMPORTANT]
+> **Ab hier beginnt ATL #2.** Die Kapitel 1–6 oben dokumentieren das
+> Softwareprojekt (ATL #1); dieses Kapitel dokumentiert das Cloud-Deployment
+> desselben Projekts.
 
 Dieses Kapitel dokumentiert Schritt für Schritt, wie der URL-Shortener in die
 Google Cloud kam: Container (Docker) → Build-Pipeline (Cloud Build) →
