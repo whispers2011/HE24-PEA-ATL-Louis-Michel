@@ -105,28 +105,23 @@ Service-Schicht kennt kein HTTP; Authentifizierung ist eine Querschnittsfunktion
 der API-Schicht. Das Vue-Frontend (`frontend/`) ist ein eigenständiger Client, der
 die REST-API über JWT konsumiert.
 
-![Schichtenarchitektur: API, Services, Daten, SQLite](docs/img/diagramm-architektur.png)
-
-<details>
-<summary>Mermaid-Quelle des Diagramms</summary>
-
-```
+```mermaid
 flowchart TD
     A["API-Schicht – Router<br/>HTTP, Status, Validierung, Auth-Guard"] --> B["Service-Schicht<br/>reine, testbare Geschäftslogik"]
     B --> C["Daten-Schicht – SQLModel<br/>Persistenz"]
     C --> D[("Datenbank<br/>SQLite")]
 ```
 
+<details>
+<summary>Diagramm als Bild (Fallback, falls das Mermaid-Rendering auf GitHub klemmt)</summary>
+
+<img src="docs/img/diagramm-architektur.png" alt="Schichtenarchitektur: API, Services, Daten, SQLite" width="276">
+
 </details>
 
 ### Datenmodell (ER)
 
-![Datenmodell: User, Link, Click mit Beziehungen](docs/img/diagramm-datenmodell.png)
-
-<details>
-<summary>Mermaid-Quelle des Diagramms</summary>
-
-```
+```mermaid
 erDiagram
     USER ||--o{ LINK : besitzt
     LINK ||--o{ CLICK : erhaelt
@@ -149,6 +144,11 @@ erDiagram
         datetime created_at
     }
 ```
+
+<details>
+<summary>Diagramm als Bild (Fallback, falls das Mermaid-Rendering auf GitHub klemmt)</summary>
+
+<img src="docs/img/diagramm-datenmodell.png" alt="Datenmodell: User, Link, Click mit Beziehungen" width="300">
 
 </details>
 
